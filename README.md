@@ -1,2 +1,3 @@
-# daily-completion
-A cross-platform app built on Flutter
+# daily_completion
+
+A new Flutter project.
