@@ -9,7 +9,7 @@ void main() {
 }
 
 class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+  const MainApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +20,7 @@ class MainApp extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -30,11 +30,22 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-  static const List<Widget> _widgetOptions = <Widget>[
-    TaskTab(),
+
+  static final List<Widget> _widgetOptions = <Widget>[
+    TaskTab(
+        taskList: List.generate(
+      100,
+      (index) => TaskInfo(
+        id: index + 1,
+        completed: false,
+        title: 'Task ${index + 1}',
+        description: 'Description for Task ${index + 1}',
+      ),
+    )),
     ChartTab(),
     SettingsTab(),
   ];
+
   static const List<Widget> _titleOptions = <Widget>[
     Text(
       'Task',
@@ -58,6 +69,16 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final List<TaskInfo> taskListForTest = List.generate(
+      5,
+      (index) => TaskInfo(
+        id: index + 1,
+        completed: false,
+        title: 'Task ${index + 1}',
+        description: 'Description for Task ${index + 1}',
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: _titleOptions.elementAt(_selectedIndex),
