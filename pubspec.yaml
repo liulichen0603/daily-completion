@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  json_annotation: ^4.8.1
+  path_provider: ^2.0.9
 
 dev_dependencies:
   flutter_test:

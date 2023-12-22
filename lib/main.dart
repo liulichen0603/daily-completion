@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'data/task_storage.dart';
 import 'ui/chart_tab.dart';
 import 'ui/settings_tab.dart';
 import 'ui/task_tab.dart';
@@ -31,13 +32,6 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-
-  static final List<Widget> _widgetOptions = <Widget>[
-    const TaskTab(),
-    const ChartTab(),
-    const SettingsTab(),
-  ];
-
   static const List<Widget> _titleOptions = <Widget>[
     Text(
       'Task',
@@ -61,12 +55,20 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: support multiple account
+    TaskModelStorage taskModelStorage = TaskModelStorage(accId: '1');
+    List<Widget> widgetOptions = <Widget>[
+      TaskTab(taskModelStorage: taskModelStorage),
+      const ChartTab(),
+      const SettingsTab(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: _titleOptions.elementAt(_selectedIndex),
       ),
       body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+        child: widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[

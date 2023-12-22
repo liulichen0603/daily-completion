@@ -1,7 +1,12 @@
+import 'package:daily_completion/data/task_storage.dart';
 import 'package:flutter/material.dart';
 
+import '../data/task_info.dart';
+
 class TaskTab extends StatefulWidget {
-  const TaskTab({Key? key}) : super(key: key);
+  const TaskTab({Key? key, required this.taskModelStorage}) : super(key: key);
+
+  final TaskModelStorage taskModelStorage;
 
   @override
   State<TaskTab> createState() => _TaskTabState();
@@ -9,18 +14,21 @@ class TaskTab extends StatefulWidget {
 
 class _TaskTabState extends State<TaskTab> {
   static int _taskId = 0;
+  late List<TaskInfo> _taskList;
 
-  // TODO: get task list from data and sort.
-  // final List<TaskInfo> _taskList = List.generate(
-  //   30,
-  //   (index) => TaskInfo(
-  //     id: ++_taskId,
-  //     completed: index % 2 == 0 ? true : false,
-  //     title: 'Task ${index + 1}',
-  //     description: 'Description for Task ${index + 1}',
-  //   ),
-  // );
-  final List<TaskInfo> _taskList = [];
+  @override
+  void initState() {
+    super.initState();
+    _initializeTaskList();
+  }
+
+  // Helper function to initialize the task list asynchronously
+  Future<void> _initializeTaskList() async {
+    _taskList = await widget.taskModelStorage.readTaskList();
+    setState(() {
+      // Trigger a rebuild after setting the state
+    });
+  }
 
   void _addNewTask(TaskInfo newTaskInfo) {
     setState(() {
@@ -33,6 +41,7 @@ class _TaskTabState extends State<TaskTab> {
           return a.completed ? 1 : -1;
         }
       });
+      widget.taskModelStorage.writeTaskList(_taskList);
     });
   }
 
@@ -58,27 +67,6 @@ class _TaskTabState extends State<TaskTab> {
     );
   }
 }
-
-class TaskInfo {
-  int id;
-  bool completed;
-  String title;
-  String description;
-
-  TaskInfo({
-    required this.id,
-    required this.completed,
-    required this.title,
-    required this.description,
-  });
-
-  @override
-  String toString() {
-    return 'TaskInfo{id: $id, completed: $completed, title: $title, description: $description}';
-  }
-}
-
-typedef AddNewTaskCallback = void Function(TaskInfo newTaskInfo);
 
 class TaskList extends StatefulWidget {
   const TaskList({super.key, required this.taskList});
