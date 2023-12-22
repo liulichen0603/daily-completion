@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'chart_tab.dart';
-import 'settings_tab.dart';
-import 'task_tab.dart';
+import 'ui/chart_tab.dart';
+import 'ui/settings_tab.dart';
+import 'ui/task_tab.dart';
 
 void main() {
   runApp(const MainApp());
@@ -13,8 +13,9 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: HomePage(),
+    return MaterialApp(
+      theme: ThemeData(colorSchemeSeed: Colors.deepPurple, useMaterial3: true),
+      home: const HomePage(),
     );
   }
 }
@@ -32,18 +33,9 @@ class _HomePageState extends State<HomePage> {
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
 
   static final List<Widget> _widgetOptions = <Widget>[
-    TaskTab(
-        taskList: List.generate(
-      100,
-      (index) => TaskInfo(
-        id: index + 1,
-        completed: false,
-        title: 'Task ${index + 1}',
-        description: 'Description for Task ${index + 1}',
-      ),
-    )),
-    ChartTab(),
-    SettingsTab(),
+    const TaskTab(),
+    const ChartTab(),
+    const SettingsTab(),
   ];
 
   static const List<Widget> _titleOptions = <Widget>[
@@ -69,16 +61,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final List<TaskInfo> taskListForTest = List.generate(
-      5,
-      (index) => TaskInfo(
-        id: index + 1,
-        completed: false,
-        title: 'Task ${index + 1}',
-        description: 'Description for Task ${index + 1}',
-      ),
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: _titleOptions.elementAt(_selectedIndex),
