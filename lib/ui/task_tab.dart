@@ -14,7 +14,7 @@ class TaskTab extends StatefulWidget {
 
 class _TaskTabState extends State<TaskTab> {
   static int _taskId = 0;
-  late List<TaskInfo> _taskList;
+  List<TaskInfo> _taskList = [];
 
   @override
   void initState() {
