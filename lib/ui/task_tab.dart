@@ -1,7 +1,6 @@
 import 'package:daily_completion/data/task_storage.dart';
+import 'package:daily_completion/data/task_info.dart';
 import 'package:flutter/material.dart';
-
-import '../data/task_info.dart';
 
 class TaskTab extends StatefulWidget {
   const TaskTab({Key? key, required this.taskModelStorage}) : super(key: key);
@@ -13,7 +12,6 @@ class TaskTab extends StatefulWidget {
 }
 
 class _TaskTabState extends State<TaskTab> {
-  static int _taskId = 0;
   List<TaskInfo> _taskList = [];
 
   @override
@@ -32,7 +30,6 @@ class _TaskTabState extends State<TaskTab> {
 
   void _addNewTask(TaskInfo newTaskInfo) {
     setState(() {
-      newTaskInfo.id = ++_taskId;
       _taskList.add(newTaskInfo);
       _taskList.sort((a, b) {
         if (a.completed == b.completed) {
@@ -79,12 +76,18 @@ class TaskList extends StatefulWidget {
 
 class _TaskListState extends State<TaskList> {
   Widget _buildTaskItem(TaskInfo task) {
+    String getTaskTitleInfo() {
+      final catagory = task.catagory.description;
+      final title = task.title;
+      return '$catagory - $title';
+    }
+
     return ListTile(
       leading: task.completed
           ? const Icon(Icons.task_alt)
           : const Icon(Icons.circle_outlined),
       title: Text(
-        task.title,
+        getTaskTitleInfo(),
         style: task.completed
             ? const TextStyle(
                 decoration: TextDecoration.lineThrough,
@@ -153,9 +156,20 @@ class NewTaskPage extends StatefulWidget {
 class _NewTaskPageState extends State<NewTaskPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
+  final TextEditingController _catagoryController = TextEditingController();
   bool _isCompleted = false;
 
   void _onClickAdd() {
+    if (_catagoryController.text.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Catagory cannot be null!'),
+          ),
+        );
+      return;
+    }
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(context)
         ..removeCurrentSnackBar()
@@ -168,10 +182,11 @@ class _NewTaskPageState extends State<NewTaskPage> {
     }
 
     TaskInfo newTaskInfo = TaskInfo(
-        id: -1,
-        completed: _isCompleted,
-        title: _titleController.text,
-        description: _descController.text);
+      completed: _isCompleted,
+      title: _titleController.text,
+      description: _descController.text,
+      catagory: TaskCatagory(description: _catagoryController.text),
+    );
     Navigator.pop(context, newTaskInfo);
   }
 
@@ -181,42 +196,50 @@ class _NewTaskPageState extends State<NewTaskPage> {
       appBar: AppBar(
         title: const Text('New Task'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextInputContainer(
-              textController: _titleController,
-              maxLines: 1,
-              labelText: 'Title',
-            ),
-            TextInputContainer(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextInputContainer(
+                textController: _catagoryController,
+                maxLines: 1,
+                labelText: 'Catagory',
+              ),
+              TextInputContainer(
+                textController: _titleController,
+                maxLines: 1,
+                labelText: 'Title',
+              ),
+              TextInputContainer(
                 textController: _descController,
                 maxLines: 15,
-                labelText: 'Description'),
-            const SizedBox(height: 6.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Checkbox(
-                  checkColor: Colors.white,
-                  value: _isCompleted,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      _isCompleted = value!;
-                    });
-                  },
-                ),
-                const Text('Completed'),
-              ],
-            ),
-            const SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _onClickAdd,
-              child: const Text('Add'),
-            ),
-          ],
+                labelText: 'Description',
+              ),
+              const SizedBox(height: 6.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Checkbox(
+                    checkColor: Colors.white,
+                    value: _isCompleted,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _isCompleted = value!;
+                      });
+                    },
+                  ),
+                  const Text('Completed'),
+                ],
+              ),
+              const SizedBox(height: 16.0),
+              ElevatedButton(
+                onPressed: _onClickAdd,
+                child: const Text('Add'),
+              ),
+            ],
+          ),
         ),
       ),
     );

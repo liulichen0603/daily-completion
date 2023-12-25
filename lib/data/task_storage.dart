@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:daily_completion/base/logging.dart';
+import 'package:daily_completion/data/task_info.dart';
 import 'package:path_provider/path_provider.dart';
-
-import 'task_info.dart';
 
 class TaskModelStorage {
   TaskModelStorage({required String accId}) : _accId = accId;
@@ -27,6 +27,7 @@ class TaskModelStorage {
     try {
       final file = await _localFile;
       final content = await file.readAsString();
+      Logger.info('TaskModelStorage readTaskList content: $content');
       final taskListJson = jsonDecode(content) as List<dynamic>;
 
       // Convert the List<dynamic> to List<TaskInfo>
@@ -44,6 +45,14 @@ class TaskModelStorage {
   Future<File> writeTaskList(List<TaskInfo> taskList) async {
     final file = await _localFile;
     final String taskListString = jsonEncode(taskList);
+    Logger.info(
+        'TaskModelStorage writeTaskList taskListString: $taskListString');
     return file.writeAsString(taskListString);
+  }
+
+  Future<File> clearTaskList() async {
+    Logger.info('TaskModelStorage clearTaskList');
+    final file = await _localFile;
+    return file.writeAsString('');
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'data/task_storage.dart';
-import 'ui/chart_tab.dart';
-import 'ui/settings_tab.dart';
-import 'ui/task_tab.dart';
+import 'package:daily_completion/data/task_storage.dart';
+import 'package:daily_completion/ui/chart_tab.dart';
+import 'package:daily_completion/ui/settings_tab.dart';
+import 'package:daily_completion/ui/task_tab.dart';
 
 void main() {
   runApp(const MainApp());
@@ -60,7 +60,7 @@ class _HomePageState extends State<HomePage> {
     List<Widget> widgetOptions = <Widget>[
       TaskTab(taskModelStorage: taskModelStorage),
       const ChartTab(),
-      const SettingsTab(),
+      SettingsTab(taskModelStorage: taskModelStorage),
     ];
 
     return Scaffold(
