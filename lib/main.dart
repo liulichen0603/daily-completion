@@ -59,7 +59,7 @@ class _HomePageState extends State<HomePage> {
     TaskModelStorage taskModelStorage = TaskModelStorage(accId: '1');
     List<Widget> widgetOptions = <Widget>[
       TaskTab(taskModelStorage: taskModelStorage),
-      const ChartTab(),
+      ChartTab(taskModelStorage: taskModelStorage),
       SettingsTab(taskModelStorage: taskModelStorage),
     ];
 

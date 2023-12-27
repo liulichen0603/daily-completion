@@ -44,6 +44,7 @@ class TaskInfo {
   bool completed;
   String title;
   String description;
+  DateTime createdTime;
   TaskCatagory catagory;
 
   TaskInfo.withId({
@@ -51,12 +52,14 @@ class TaskInfo {
     required this.completed,
     required this.title,
     required this.description,
+    required this.createdTime,
     required this.catagory,
   });
   TaskInfo({
     required this.completed,
     required this.title,
     required this.description,
+    required this.createdTime,
     required this.catagory,
   }) : id = _incId++;
 
@@ -66,6 +69,7 @@ class TaskInfo {
       'completed': completed,
       'title': title,
       'description': description,
+      'createdTime': createdTime.toString(),
       'catagory': catagory.toJson(),
     };
   }
@@ -76,13 +80,14 @@ class TaskInfo {
       completed: json['completed'],
       title: json['title'],
       description: json['description'],
+      createdTime: DateTime.parse(json['createdTime']),
       catagory: TaskCatagory.fromJson(json['catagory'] as Map<String, dynamic>),
     );
   }
 
   @override
   String toString() {
-    return 'TaskInfo{id: $id, completed: $completed, title: $title, description: $description, catagory: $catagory}';
+    return 'TaskInfo{id: $id, completed: $completed, title: $title, description: $description, createdTime: $createdTime, catagory: $catagory}';
   }
 }
 

@@ -185,6 +185,7 @@ class _NewTaskPageState extends State<NewTaskPage> {
       completed: _isCompleted,
       title: _titleController.text,
       description: _descController.text,
+      createdTime: DateTime.now(),
       catagory: TaskCatagory(description: _catagoryController.text),
     );
     Navigator.pop(context, newTaskInfo);
