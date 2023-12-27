@@ -12,6 +12,8 @@ enum TimePeriodSelect {
   total,
 }
 
+typedef TimePeriodButtonCallback = void Function(TimePeriodSelect timePeriod);
+
 class ChartTab extends StatefulWidget {
   const ChartTab({super.key, required this.taskModelStorage});
 
@@ -22,16 +24,24 @@ class ChartTab extends StatefulWidget {
 }
 
 class _ChartTabState extends State<ChartTab> {
-  final TimePeriodSelect _timePeriodSelect = TimePeriodSelect.day;
+  TimePeriodSelect _timePeriodSelect = TimePeriodSelect.total;
+  TimePeriodButtonCallback _buttonCallback = (timePeriod) {};
+
+  @override
+  void initState() {
+    super.initState();
+    _buttonCallback = (timePeriod) {
+      setState(() {
+        _timePeriodSelect = timePeriod;
+      });
+    };
+  }
 
   Future<List<TaskInfo>> _readTaskList() async {
     return await widget.taskModelStorage.readTaskList();
   }
 
-  Future<List<int>> _getGroupData() async {
-    List<TaskInfo> taskList = await _readTaskList();
-    List<int> groupData = [];
-
+  Future<Map<int, List<TaskInfo>>> _getGroupData() async {
     Function dateComparison = <bool>(DateTime dt1, DateTime dt2) => true;
     switch (_timePeriodSelect) {
       case TimePeriodSelect.day:
@@ -52,26 +62,32 @@ class _ChartTabState extends State<ChartTab> {
     }
 
     DateTime now = DateTime.now();
+    List<TaskInfo> taskList = await _readTaskList();
+    Map<int, List<TaskInfo>> groupData = {};
 
-    taskList.forEach((task) {
+    for (var task in taskList) {
       if (dateComparison(now, task.createdTime)) {
-        groupData.add(task.id);
+        int catagoryId = task.catagory.id;
+        if (!groupData.containsKey(catagoryId)) {
+          groupData[catagoryId] = [];
+        }
+        groupData[catagoryId]!.add(task);
       }
-    });
+    }
 
     return groupData;
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        TimePeriodSelection(),
-        SizedBox(
+        TimePeriodSelection(onTimePeriodSelected: _buttonCallback),
+        const SizedBox(
           height: 16.0,
         ),
-        BarChartView(),
+        const BarChartView(),
       ],
     );
   }
@@ -80,26 +96,73 @@ class _ChartTabState extends State<ChartTab> {
 class TimePeriodSelection extends StatelessWidget {
   const TimePeriodSelection({
     super.key,
+    required this.onTimePeriodSelected,
   });
+
+  final TimePeriodButtonCallback onTimePeriodSelected;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ElevatedButton(
-          onPressed: null,
-          child: Text('data1'),
-        ),
-        ElevatedButton(
-          onPressed: null,
-          child: Text('data2'),
-        ),
-        ElevatedButton(
-          onPressed: null,
-          child: Text('data3'),
-        ),
-      ],
+    return SizedBox(
+      height: 50,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(8),
+        children: <Widget>[
+          SelectTimePeriodButton(
+            onTimePeriodSelected: onTimePeriodSelected,
+            selectType: TimePeriodSelect.day,
+            buttonText: 'Today',
+          ),
+          SelectTimePeriodButton(
+            onTimePeriodSelected: onTimePeriodSelected,
+            selectType: TimePeriodSelect.week,
+            buttonText: 'Week',
+          ),
+          SelectTimePeriodButton(
+            onTimePeriodSelected: onTimePeriodSelected,
+            selectType: TimePeriodSelect.month,
+            buttonText: 'Month',
+          ),
+          SelectTimePeriodButton(
+            onTimePeriodSelected: onTimePeriodSelected,
+            selectType: TimePeriodSelect.year,
+            buttonText: 'Year',
+          ),
+          SelectTimePeriodButton(
+            onTimePeriodSelected: onTimePeriodSelected,
+            selectType: TimePeriodSelect.total,
+            buttonText: 'Total',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SelectTimePeriodButton extends StatelessWidget {
+  const SelectTimePeriodButton({
+    super.key,
+    required this.onTimePeriodSelected,
+    required this.selectType,
+    required this.buttonText,
+  });
+
+  final TimePeriodButtonCallback onTimePeriodSelected;
+  final TimePeriodSelect selectType;
+  final String buttonText;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      width: 100,
+      child: ElevatedButton(
+        onPressed: () {
+          onTimePeriodSelected(selectType);
+        },
+        child: Text(buttonText),
+      ),
     );
   }
 }
