@@ -1,4 +1,7 @@
+import 'dart:collection';
+
 import 'package:daily_completion/base/datetime_utils.dart';
+import 'package:daily_completion/base/logging.dart';
 import 'package:daily_completion/data/task_info.dart';
 import 'package:daily_completion/data/task_storage.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -41,7 +44,7 @@ class _ChartTabState extends State<ChartTab> {
     return await widget.taskModelStorage.readTaskList();
   }
 
-  Future<Map<int, List<TaskInfo>>> _getGroupData() async {
+  Future<Map<int, List<TaskInfo>>> _getTaskMap() async {
     Function dateComparison = <bool>(DateTime dt1, DateTime dt2) => true;
     switch (_timePeriodSelect) {
       case TimePeriodSelect.day:
@@ -63,19 +66,124 @@ class _ChartTabState extends State<ChartTab> {
 
     DateTime now = DateTime.now();
     List<TaskInfo> taskList = await _readTaskList();
-    Map<int, List<TaskInfo>> groupData = {};
+    Map<int, List<TaskInfo>> taskMap = <int, List<TaskInfo>>{};
 
     for (var task in taskList) {
       if (dateComparison(now, task.createdTime)) {
         int catagoryId = task.catagory.id;
-        if (!groupData.containsKey(catagoryId)) {
-          groupData[catagoryId] = [];
+        if (!taskMap.containsKey(catagoryId)) {
+          taskMap[catagoryId] = [];
         }
-        groupData[catagoryId]!.add(task);
+        taskMap[catagoryId]!.add(task);
       }
     }
 
-    return groupData;
+    // Convert Map to List then to Map, can get key of Map as axis x.
+    List<List<TaskInfo>> tempTaskList = [];
+    taskMap.forEach((key, value) {
+      tempTaskList.add(value);
+    });
+    taskMap = tempTaskList.asMap();
+
+    return taskMap;
+  }
+
+  SideTitles _getBottomTiles(Map<int, List<TaskInfo>> taskMap) {
+    List<TaskCatagory> catagoryList = [];
+
+    taskMap.forEach((int key, List<TaskInfo> value) {
+      if (value.isNotEmpty) {
+        catagoryList.add(value[0].catagory);
+      }
+    });
+
+    return SideTitles(
+      showTitles: true,
+      getTitlesWidget: (value, meta) {
+        String text = '';
+        int valIdx = value.toInt();
+        if (taskMap.containsKey(valIdx) && taskMap[valIdx]!.isNotEmpty) {
+          text = taskMap[valIdx]![0].description;
+        } else {
+          Logger.error(
+              'chart_tab _getBottomTiles valIdx: $valIdx is out of range.');
+        }
+        return Text(
+          text,
+          style: const TextStyle(fontSize: 10),
+        );
+      },
+    );
+  }
+
+  Color _getNextColor() {
+    List<Color> colors = [
+      Colors.red,
+      Colors.orange,
+      Colors.yellow,
+      Colors.green,
+      Colors.cyan,
+      Colors.blue,
+      Colors.purple,
+    ];
+
+    // 获取下一个颜色索引
+    int colorIndex = _currentColorIndex % colors.length;
+
+    // 更新颜色索引
+    _currentColorIndex++;
+
+    // 返回颜色
+    return colors[colorIndex];
+  }
+
+  List<BarChartGroupData> _getBarChartGroupData(
+      Map<int, List<TaskInfo>> taskMap) {
+    List<BarChartGroupData> groupDataList = [];
+    taskMap.forEach((int axisX, List<TaskInfo> taskList) {
+      List<BarChartRodData> rodDataList = [];
+      int posY = 0;
+      for (TaskInfo task in taskList) {
+        int duration = task.duration;
+        int fromY = posY;
+        int toY = fromY + duration;
+        Color color = _getNextColor();
+        rodDataList.add(BarChartRodData(
+          fromY: fromY,
+          toY: toY,
+          color: color,
+        ));
+      }
+      groupDataList.add(BarChartGroupData(
+        x: axisX,
+        groupVertically: true,
+        barRods: rodDataList,
+      ));
+    });
+
+    return groupDataList;
+
+    // BarChartGroupData(
+    //           x: 0,
+    //           groupVertically: true,
+    //           barRods: [
+    //             BarChartRodData(
+    //               fromY: 0,
+    //               toY: 5,
+    //               color: Colors.blue,
+    //             ),
+    //             BarChartRodData(
+    //               fromY: 5,
+    //               toY: 30,
+    //               color: Colors.red,
+    //             ),
+    //             BarChartRodData(
+    //               fromY: 30,
+    //               toY: 100,
+    //               color: Colors.green,
+    //             ),
+    //           ],
+    //         ),
   }
 
   @override
@@ -277,40 +385,41 @@ class BarChartView extends StatelessWidget {
               ),
             ),
             bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                String text = '';
-                switch (value.toInt()) {
-                  case 0:
-                    text = 'Mon';
-                    break;
-                  case 1:
-                    text = 'Tue';
-                    break;
-                  case 2:
-                    text = 'Wed';
-                    break;
-                  case 3:
-                    text = 'Thu';
-                    break;
-                  case 4:
-                    text = 'Fri';
-                    break;
-                  case 5:
-                    text = 'Sat';
-                    break;
-                  case 6:
-                    text = 'Sun';
-                    break;
-                }
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  String text = '';
+                  switch (value.toInt()) {
+                    case 0:
+                      text = 'Mon';
+                      break;
+                    case 1:
+                      text = 'Tue';
+                      break;
+                    case 2:
+                      text = 'Wed';
+                      break;
+                    case 3:
+                      text = 'Thu';
+                      break;
+                    case 4:
+                      text = 'Fri';
+                      break;
+                    case 5:
+                      text = 'Sat';
+                      break;
+                    case 6:
+                      text = 'Sun';
+                      break;
+                  }
 
-                return Text(
-                  text,
-                  style: const TextStyle(fontSize: 10),
-                );
-              },
-            )),
+                  return Text(
+                    text,
+                    style: const TextStyle(fontSize: 10),
+                  );
+                },
+              ),
+            ),
             topTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
