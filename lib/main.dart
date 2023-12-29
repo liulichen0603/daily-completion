@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:daily_completion/data/task_storage.dart';
+import 'package:daily_completion/data/local_storage.dart';
 import 'package:daily_completion/ui/chart_tab.dart';
 import 'package:daily_completion/ui/settings_tab.dart';
 import 'package:daily_completion/ui/task_tab.dart';
@@ -56,11 +56,14 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     // TODO: support multiple account
-    TaskModelStorage taskModelStorage = TaskModelStorage(accId: '1');
+    String accId = '1';
+    TaskInfoStorage.getInstance().initialize(accId);
+    TaskCatagoryStorage.getInstance().initialize(accId);
+
     List<Widget> widgetOptions = <Widget>[
-      TaskTab(taskModelStorage: taskModelStorage),
-      ChartTab(taskModelStorage: taskModelStorage),
-      SettingsTab(taskModelStorage: taskModelStorage),
+      const TaskTab(),
+      const ChartTab(),
+      const SettingsTab(),
     ];
 
     return Scaffold(

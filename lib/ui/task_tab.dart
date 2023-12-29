@@ -1,11 +1,9 @@
-import 'package:daily_completion/data/task_storage.dart';
+import 'package:daily_completion/data/local_storage.dart';
 import 'package:daily_completion/data/task_info.dart';
 import 'package:flutter/material.dart';
 
 class TaskTab extends StatefulWidget {
-  const TaskTab({Key? key, required this.taskModelStorage}) : super(key: key);
-
-  final TaskModelStorage taskModelStorage;
+  const TaskTab({super.key});
 
   @override
   State<TaskTab> createState() => _TaskTabState();
@@ -13,6 +11,7 @@ class TaskTab extends StatefulWidget {
 
 class _TaskTabState extends State<TaskTab> {
   List<TaskInfo> _taskList = [];
+  List<TaskCatagory> _catagoryList = [];
 
   @override
   void initState() {
@@ -22,7 +21,8 @@ class _TaskTabState extends State<TaskTab> {
 
   // Helper function to initialize the task list asynchronously
   Future<void> _initializeTaskList() async {
-    _taskList = await widget.taskModelStorage.readTaskList();
+    _taskList = await TaskInfoStorage.getInstance().readTaskList();
+    _catagoryList = await TaskCatagoryStorage.getInstance().readCatagoryList();
     setState(() {
       // Trigger a rebuild after setting the state
     });
@@ -38,7 +38,7 @@ class _TaskTabState extends State<TaskTab> {
           return a.completed ? 1 : -1;
         }
       });
-      widget.taskModelStorage.writeTaskList(_taskList);
+      TaskInfoStorage.getInstance().writeTaskList(_taskList);
     });
   }
 
@@ -48,7 +48,10 @@ class _TaskTabState extends State<TaskTab> {
       children: <Widget>[
         Expanded(
           flex: 2,
-          child: TaskList(taskList: _taskList),
+          child: TaskList(
+            taskList: _taskList,
+            catagoryList: _catagoryList,
+          ),
         ),
         const SizedBox(height: 8.0),
         Align(
@@ -66,9 +69,14 @@ class _TaskTabState extends State<TaskTab> {
 }
 
 class TaskList extends StatefulWidget {
-  const TaskList({super.key, required this.taskList});
+  const TaskList({
+    super.key,
+    required this.taskList,
+    required this.catagoryList,
+  });
 
   final List<TaskInfo> taskList;
+  final List<TaskCatagory> catagoryList;
 
   @override
   State<TaskList> createState() => _TaskListState();
@@ -77,9 +85,14 @@ class TaskList extends StatefulWidget {
 class _TaskListState extends State<TaskList> {
   Widget _buildTaskItem(TaskInfo task) {
     String getTaskTitleInfo() {
-      final catagory = task.catagory.description;
-      final title = task.title;
-      return '$catagory - $title';
+      TaskCatagory? catagory;
+      for (TaskCatagory cata in widget.catagoryList) {
+        if (task.catagoryId == cata.id) {
+          catagory = cata;
+          break;
+        }
+      }
+      return '${catagory?.description} -- ${task.title}';
     }
 
     return ListTile(
@@ -116,7 +129,10 @@ class _TaskListState extends State<TaskList> {
 }
 
 class NewTaskButton extends StatefulWidget {
-  const NewTaskButton({super.key, required this.addNewTaskCallback});
+  const NewTaskButton({
+    super.key,
+    required this.addNewTaskCallback,
+  });
 
   final AddNewTaskCallback addNewTaskCallback;
 
@@ -156,20 +172,36 @@ class NewTaskPage extends StatefulWidget {
 class _NewTaskPageState extends State<NewTaskPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
-  final TextEditingController _catagoryController = TextEditingController();
+  final TextEditingController _durController = TextEditingController();
   bool _isCompleted = false;
+  int _selectedCatagoryId = 0;
+  late List<TaskCatagory> _catagoryList;
+  late VoidTaskCatagoryCallback _onCatagorySelectedCallback;
+  late VoidTaskCatagoryCallback _onCatagoryAddedCallback;
+
+  _NewTaskPageState() {
+    initializeCatagoryList();
+    _onCatagorySelectedCallback = (TaskCatagory? catagory) {
+      if (catagory != null) {
+        _selectedCatagoryId = catagory.id;
+      }
+    };
+    _onCatagoryAddedCallback = (TaskCatagory? catagory) {
+      if (catagory != null) {
+        _catagoryList.add(catagory);
+        _catagoryList.sort((a, b) {
+          return a.id.compareTo(b.id);
+        });
+        TaskCatagoryStorage.getInstance().writeCatagoryList(_catagoryList);
+      }
+    };
+  }
+
+  Future<void> initializeCatagoryList() async {
+    _catagoryList = await TaskCatagoryStorage.getInstance().readCatagoryList();
+  }
 
   void _onClickAdd() {
-    if (_catagoryController.text.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..removeCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Catagory cannot be null!'),
-          ),
-        );
-      return;
-    }
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(context)
         ..removeCurrentSnackBar()
@@ -180,13 +212,34 @@ class _NewTaskPageState extends State<NewTaskPage> {
         );
       return;
     }
+    if (_durController.text.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Duration cannot be null!'),
+          ),
+        );
+      return;
+    }
+    if (double.tryParse(_durController.text) == null) {
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Invalid duration!'),
+          ),
+        );
+      return;
+    }
 
     TaskInfo newTaskInfo = TaskInfo(
       completed: _isCompleted,
       title: _titleController.text,
       description: _descController.text,
       createdTime: DateTime.now(),
-      catagory: TaskCatagory(description: _catagoryController.text),
+      duration: double.parse(_durController.text),
+      catagoryId: _selectedCatagoryId,
     );
     Navigator.pop(context, newTaskInfo);
   }
@@ -203,10 +256,10 @@ class _NewTaskPageState extends State<NewTaskPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextInputContainer(
-                textController: _catagoryController,
-                maxLines: 1,
-                labelText: 'Catagory',
+              CatagoryMenuContainer(
+                catagoryList: _catagoryList,
+                onCatagoryAddedCallback: _onCatagoryAddedCallback,
+                onCatagorySelectedCallback: _onCatagorySelectedCallback,
               ),
               TextInputContainer(
                 textController: _titleController,
@@ -214,8 +267,13 @@ class _NewTaskPageState extends State<NewTaskPage> {
                 labelText: 'Title',
               ),
               TextInputContainer(
+                textController: _durController,
+                maxLines: 1,
+                labelText: 'Duration',
+              ),
+              TextInputContainer(
                 textController: _descController,
-                maxLines: 15,
+                maxLines: 10,
                 labelText: 'Description',
               ),
               const SizedBox(height: 6.0),
@@ -292,6 +350,110 @@ class TextInputContainer extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class CatagoryMenuContainer extends StatefulWidget {
+  final List<TaskCatagory> catagoryList;
+  final VoidTaskCatagoryCallback onCatagorySelectedCallback;
+  final VoidTaskCatagoryCallback onCatagoryAddedCallback;
+
+  const CatagoryMenuContainer({
+    Key? key,
+    required this.catagoryList,
+    required this.onCatagorySelectedCallback,
+    required this.onCatagoryAddedCallback,
+  }) : super(key: key);
+
+  @override
+  State<CatagoryMenuContainer> createState() => _CatagoryMenuContainerState();
+}
+
+class _CatagoryMenuContainerState extends State<CatagoryMenuContainer> {
+  final TextEditingController newCatagoryTextController =
+      TextEditingController();
+  late TaskCatagory? selectedCatagory;
+
+  _CatagoryMenuContainerState() {
+    selectedCatagory = widget.catagoryList.elementAtOrNull(0);
+  }
+
+  void addNewTaskCatagory(String newCatagoryDesc) {
+    if (newCatagoryDesc.isEmpty) {
+      return;
+    }
+
+    TaskCatagory newCatagory = TaskCatagory(description: newCatagoryDesc);
+    widget.onCatagoryAddedCallback(newCatagory);
+    widget.onCatagorySelectedCallback(newCatagory);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        DropdownMenu<TaskCatagory>(
+          initialSelection: selectedCatagory,
+          requestFocusOnTap: false,
+          label: const Text('Task Catagory'),
+          onSelected: widget.onCatagorySelectedCallback,
+          dropdownMenuEntries: widget.catagoryList
+              .map<DropdownMenuEntry<TaskCatagory>>((TaskCatagory catagory) {
+            return DropdownMenuEntry<TaskCatagory>(
+              value: catagory,
+              label: catagory.description,
+              enabled: true,
+            );
+          }).toList(),
+        ),
+        const SizedBox(
+          width: 10,
+        ),
+        ElevatedButton.icon(
+          onPressed: () => showDialog<String>(
+            context: context,
+            builder: (BuildContext context) => Dialog(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const Text('Add new task catagory'),
+                    const SizedBox(height: 15),
+                    TextInputContainer(
+                      textController: newCatagoryTextController,
+                      maxLines: 1,
+                      labelText: 'New task catagory',
+                    ),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 15),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            addNewTaskCatagory(newCatagoryTextController.text);
+                          },
+                          child: const Text('Add'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.add),
+          label: const Text('Add'),
+        ),
+      ],
     );
   }
 }

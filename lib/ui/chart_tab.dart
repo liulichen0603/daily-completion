@@ -1,9 +1,7 @@
-import 'dart:collection';
-
 import 'package:daily_completion/base/datetime_utils.dart';
 import 'package:daily_completion/base/logging.dart';
 import 'package:daily_completion/data/task_info.dart';
-import 'package:daily_completion/data/task_storage.dart';
+import 'package:daily_completion/data/local_storage.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -18,9 +16,7 @@ enum TimePeriodSelect {
 typedef TimePeriodButtonCallback = void Function(TimePeriodSelect timePeriod);
 
 class ChartTab extends StatefulWidget {
-  const ChartTab({super.key, required this.taskModelStorage});
-
-  final TaskModelStorage taskModelStorage;
+  const ChartTab({super.key});
 
   @override
   State<ChartTab> createState() => _ChartTabState();
@@ -29,6 +25,9 @@ class ChartTab extends StatefulWidget {
 class _ChartTabState extends State<ChartTab> {
   TimePeriodSelect _timePeriodSelect = TimePeriodSelect.total;
   TimePeriodButtonCallback _buttonCallback = (timePeriod) {};
+  int _colorIndex = 0;
+  Map<int, List<TaskInfo>> _taskMap = {};
+  List<TaskCatagory> _catagoryList = [];
 
   @override
   void initState() {
@@ -37,11 +36,21 @@ class _ChartTabState extends State<ChartTab> {
       setState(() {
         _timePeriodSelect = timePeriod;
       });
+      _initializeTaskMap();
     };
   }
 
+  // Helper function to initialize the task list asynchronously
+  Future<void> _initializeTaskMap() async {
+    _taskMap = await _getTaskMap();
+    _catagoryList = await TaskCatagoryStorage.getInstance().readCatagoryList();
+    setState(() {
+      // Trigger a rebuild after setting the state
+    });
+  }
+
   Future<List<TaskInfo>> _readTaskList() async {
-    return await widget.taskModelStorage.readTaskList();
+    return await TaskInfoStorage.getInstance().readTaskList();
   }
 
   Future<Map<int, List<TaskInfo>>> _getTaskMap() async {
@@ -69,8 +78,11 @@ class _ChartTabState extends State<ChartTab> {
     Map<int, List<TaskInfo>> taskMap = <int, List<TaskInfo>>{};
 
     for (var task in taskList) {
+      if (!task.completed) {
+        continue;
+      }
       if (dateComparison(now, task.createdTime)) {
-        int catagoryId = task.catagory.id;
+        int catagoryId = task.catagoryId;
         if (!taskMap.containsKey(catagoryId)) {
           taskMap[catagoryId] = [];
         }
@@ -88,12 +100,24 @@ class _ChartTabState extends State<ChartTab> {
     return taskMap;
   }
 
+  TaskCatagory? _getTaskCatagoryById(int catagoryId) {
+    for (TaskCatagory catagory in _catagoryList) {
+      if (catagory.id == catagoryId) {
+        return catagory;
+      }
+    }
+    return null;
+  }
+
   SideTitles _getBottomTiles(Map<int, List<TaskInfo>> taskMap) {
     List<TaskCatagory> catagoryList = [];
 
     taskMap.forEach((int key, List<TaskInfo> value) {
       if (value.isNotEmpty) {
-        catagoryList.add(value[0].catagory);
+        TaskCatagory? catagory = _getTaskCatagoryById(value[0].catagoryId);
+        if (catagory != null) {
+          catagoryList.add(catagory);
+        }
       }
     });
 
@@ -103,7 +127,9 @@ class _ChartTabState extends State<ChartTab> {
         String text = '';
         int valIdx = value.toInt();
         if (taskMap.containsKey(valIdx) && taskMap[valIdx]!.isNotEmpty) {
-          text = taskMap[valIdx]![0].description;
+          TaskCatagory? catagory =
+              _getTaskCatagoryById(taskMap[valIdx]![0].catagoryId);
+          text = catagory == null ? '' : catagory.description;
         } else {
           Logger.error(
               'chart_tab _getBottomTiles valIdx: $valIdx is out of range.');
@@ -126,14 +152,8 @@ class _ChartTabState extends State<ChartTab> {
       Colors.blue,
       Colors.purple,
     ];
-
-    // 获取下一个颜色索引
-    int colorIndex = _currentColorIndex % colors.length;
-
-    // 更新颜色索引
-    _currentColorIndex++;
-
-    // 返回颜色
+    int colorIndex = _colorIndex % colors.length;
+    _colorIndex++;
     return colors[colorIndex];
   }
 
@@ -142,17 +162,15 @@ class _ChartTabState extends State<ChartTab> {
     List<BarChartGroupData> groupDataList = [];
     taskMap.forEach((int axisX, List<TaskInfo> taskList) {
       List<BarChartRodData> rodDataList = [];
-      int posY = 0;
+      double posY = 0;
       for (TaskInfo task in taskList) {
-        int duration = task.duration;
-        int fromY = posY;
-        int toY = fromY + duration;
         Color color = _getNextColor();
         rodDataList.add(BarChartRodData(
-          fromY: fromY,
-          toY: toY,
+          fromY: posY,
+          toY: posY + task.duration,
           color: color,
         ));
+        posY = posY + task.duration;
       }
       groupDataList.add(BarChartGroupData(
         x: axisX,
@@ -162,28 +180,6 @@ class _ChartTabState extends State<ChartTab> {
     });
 
     return groupDataList;
-
-    // BarChartGroupData(
-    //           x: 0,
-    //           groupVertically: true,
-    //           barRods: [
-    //             BarChartRodData(
-    //               fromY: 0,
-    //               toY: 5,
-    //               color: Colors.blue,
-    //             ),
-    //             BarChartRodData(
-    //               fromY: 5,
-    //               toY: 30,
-    //               color: Colors.red,
-    //             ),
-    //             BarChartRodData(
-    //               fromY: 30,
-    //               toY: 100,
-    //               color: Colors.green,
-    //             ),
-    //           ],
-    //         ),
   }
 
   @override
@@ -195,7 +191,10 @@ class _ChartTabState extends State<ChartTab> {
         const SizedBox(
           height: 16.0,
         ),
-        const BarChartView(),
+        BarChartView(
+          groupData: _getBarChartGroupData(_taskMap),
+          bottomTile: _getBottomTiles(_taskMap),
+        ),
       ],
     );
   }
@@ -278,7 +277,12 @@ class SelectTimePeriodButton extends StatelessWidget {
 class BarChartView extends StatelessWidget {
   const BarChartView({
     super.key,
+    required this.groupData,
+    required this.bottomTile,
   });
+
+  final List<BarChartGroupData> groupData;
+  final SideTitles bottomTile;
 
   @override
   Widget build(BuildContext context) {
@@ -287,83 +291,7 @@ class BarChartView extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       child: BarChart(
         BarChartData(
-          barGroups: [
-            BarChartGroupData(
-              x: 0,
-              groupVertically: true,
-              barRods: [
-                BarChartRodData(
-                  fromY: 0,
-                  toY: 5,
-                  color: Colors.blue,
-                ),
-                BarChartRodData(
-                  fromY: 5,
-                  toY: 30,
-                  color: Colors.red,
-                ),
-                BarChartRodData(
-                  fromY: 30,
-                  toY: 100,
-                  color: Colors.green,
-                ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 1,
-              barRods: [
-                BarChartRodData(
-                  toY: 25,
-                  color: Colors.green,
-                ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 2,
-              barRods: [
-                BarChartRodData(
-                  toY: 100,
-                  color: Colors.orange,
-                ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 3,
-              barRods: [
-                BarChartRodData(
-                  toY: 75,
-                  color: Colors.red,
-                ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 4,
-              barRods: [
-                BarChartRodData(
-                  toY: 120,
-                  color: Colors.red,
-                ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 5,
-              barRods: [
-                BarChartRodData(
-                  toY: 30,
-                  color: Colors.red,
-                ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 6,
-              barRods: [
-                BarChartRodData(
-                  toY: 50,
-                  color: Colors.red,
-                ),
-              ],
-            ),
-          ],
+          barGroups: groupData,
           borderData: FlBorderData(
             border: const Border(
               bottom: BorderSide(),
@@ -385,40 +313,7 @@ class BarChartView extends StatelessWidget {
               ),
             ),
             bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  String text = '';
-                  switch (value.toInt()) {
-                    case 0:
-                      text = 'Mon';
-                      break;
-                    case 1:
-                      text = 'Tue';
-                      break;
-                    case 2:
-                      text = 'Wed';
-                      break;
-                    case 3:
-                      text = 'Thu';
-                      break;
-                    case 4:
-                      text = 'Fri';
-                      break;
-                    case 5:
-                      text = 'Sat';
-                      break;
-                    case 6:
-                      text = 'Sun';
-                      break;
-                  }
-
-                  return Text(
-                    text,
-                    style: const TextStyle(fontSize: 10),
-                  );
-                },
-              ),
+              sideTitles: bottomTile,
             ),
             topTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),

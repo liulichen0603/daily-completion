@@ -1,27 +1,37 @@
 import 'package:flutter/material.dart';
 
-import 'package:daily_completion/data/task_storage.dart';
+import 'package:daily_completion/data/local_storage.dart';
 
-class SettingsTab extends StatefulWidget {
-  const SettingsTab({super.key, required this.taskModelStorage});
+class SettingsTab extends StatelessWidget {
+  const SettingsTab({super.key});
 
-  final TaskModelStorage taskModelStorage;
-
-  @override
-  State<SettingsTab> createState() => _SettingsTabState();
-}
-
-class _SettingsTabState extends State<SettingsTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            widget.taskModelStorage.clearTaskList();
-          },
-          child: const Text('Clear Task Storage'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                LocalStorage.getInstance().clearAll();
+              },
+              child: const Text('Clear All'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                TaskInfoStorage.getInstance().clearTaskList();
+              },
+              child: const Text('Clear Task Storage'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                TaskCatagoryStorage.getInstance().clearCatagoryList();
+              },
+              child: const Text('Clear Catagory Storage'),
+            ),
+          ],
         ),
       ),
     );

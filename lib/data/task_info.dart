@@ -1,3 +1,4 @@
+import 'package:daily_completion/data/local_storage.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 @JsonSerializable()
@@ -34,7 +35,20 @@ class TaskCatagory {
   String toString() {
     return 'TaskCatagory{id: $id, description: $description}';
   }
+
+  Future<TaskCatagory?> getCatagoryById(int id) async {
+    List<TaskCatagory> catagoryList =
+        await TaskCatagoryStorage.getInstance().readCatagoryList();
+    for (TaskCatagory cata in catagoryList) {
+      if (id == cata.id) {
+        return cata;
+      }
+    }
+    return null;
+  }
 }
+
+typedef VoidTaskCatagoryCallback = void Function(TaskCatagory? newCatagoryInfo);
 
 @JsonSerializable()
 class TaskInfo {
@@ -45,7 +59,8 @@ class TaskInfo {
   String title;
   String description;
   DateTime createdTime;
-  TaskCatagory catagory;
+  double duration;
+  int catagoryId;
 
   TaskInfo.withId({
     required this.id,
@@ -53,14 +68,16 @@ class TaskInfo {
     required this.title,
     required this.description,
     required this.createdTime,
-    required this.catagory,
+    required this.duration,
+    required this.catagoryId,
   });
   TaskInfo({
     required this.completed,
     required this.title,
     required this.description,
     required this.createdTime,
-    required this.catagory,
+    required this.duration,
+    required this.catagoryId,
   }) : id = _incId++;
 
   Map<String, dynamic> toJson() {
@@ -70,7 +87,8 @@ class TaskInfo {
       'title': title,
       'description': description,
       'createdTime': createdTime.toString(),
-      'catagory': catagory.toJson(),
+      'duration': duration.toString(),
+      'catagory': catagoryId,
     };
   }
 
@@ -81,13 +99,14 @@ class TaskInfo {
       title: json['title'],
       description: json['description'],
       createdTime: DateTime.parse(json['createdTime']),
-      catagory: TaskCatagory.fromJson(json['catagory'] as Map<String, dynamic>),
+      duration: double.parse(json['duration']),
+      catagoryId: json['catagory'],
     );
   }
 
   @override
   String toString() {
-    return 'TaskInfo{id: $id, completed: $completed, title: $title, description: $description, createdTime: $createdTime, catagory: $catagory}';
+    return 'TaskInfo{id: $id, completed: $completed, title: $title, description: $description, createdTime: $createdTime, duration: $duration, catagory: $catagoryId}';
   }
 }
 
