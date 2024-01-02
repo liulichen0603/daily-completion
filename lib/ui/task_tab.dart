@@ -175,30 +175,37 @@ class _NewTaskPageState extends State<NewTaskPage> {
   final TextEditingController _durController = TextEditingController();
   bool _isCompleted = false;
   int _selectedCatagoryId = 0;
-  late List<TaskCatagory> _catagoryList;
+  List<TaskCatagory> _catagoryList = [];
   late VoidTaskCatagoryCallback _onCatagorySelectedCallback;
   late VoidTaskCatagoryCallback _onCatagoryAddedCallback;
 
   _NewTaskPageState() {
     initializeCatagoryList();
     _onCatagorySelectedCallback = (TaskCatagory? catagory) {
-      if (catagory != null) {
-        _selectedCatagoryId = catagory.id;
-      }
+      setState(() {
+        if (catagory != null) {
+          _selectedCatagoryId = catagory.id;
+        }
+      });
     };
     _onCatagoryAddedCallback = (TaskCatagory? catagory) {
-      if (catagory != null) {
-        _catagoryList.add(catagory);
-        _catagoryList.sort((a, b) {
-          return a.id.compareTo(b.id);
-        });
-        TaskCatagoryStorage.getInstance().writeCatagoryList(_catagoryList);
-      }
+      setState(() {
+        if (catagory != null) {
+          _catagoryList.add(catagory);
+          _catagoryList.sort((a, b) {
+            return a.id.compareTo(b.id);
+          });
+          TaskCatagoryStorage.getInstance().writeCatagoryList(_catagoryList);
+        }
+      });
     };
   }
 
   Future<void> initializeCatagoryList() async {
     _catagoryList = await TaskCatagoryStorage.getInstance().readCatagoryList();
+    setState(() {
+      // Trigger a rebuild after setting the state
+    });
   }
 
   void _onClickAdd() {
@@ -355,7 +362,7 @@ class TextInputContainer extends StatelessWidget {
 }
 
 class CatagoryMenuContainer extends StatefulWidget {
-  final List<TaskCatagory> catagoryList;
+  final List<TaskCatagory>? catagoryList;
   final VoidTaskCatagoryCallback onCatagorySelectedCallback;
   final VoidTaskCatagoryCallback onCatagoryAddedCallback;
 
@@ -373,10 +380,12 @@ class CatagoryMenuContainer extends StatefulWidget {
 class _CatagoryMenuContainerState extends State<CatagoryMenuContainer> {
   final TextEditingController newCatagoryTextController =
       TextEditingController();
-  late TaskCatagory? selectedCatagory;
+  TaskCatagory? selectedCatagory;
 
-  _CatagoryMenuContainerState() {
-    selectedCatagory = widget.catagoryList.elementAtOrNull(0);
+  @override
+  void initState() {
+    super.initState();
+    selectedCatagory = widget.catagoryList?.elementAtOrNull(0);
   }
 
   void addNewTaskCatagory(String newCatagoryDesc) {
@@ -391,6 +400,7 @@ class _CatagoryMenuContainerState extends State<CatagoryMenuContainer> {
 
   @override
   Widget build(BuildContext context) {
+    List<TaskCatagory> existingCataList = widget.catagoryList ?? [];
     return Row(
       children: [
         DropdownMenu<TaskCatagory>(
@@ -398,7 +408,7 @@ class _CatagoryMenuContainerState extends State<CatagoryMenuContainer> {
           requestFocusOnTap: false,
           label: const Text('Task Catagory'),
           onSelected: widget.onCatagorySelectedCallback,
-          dropdownMenuEntries: widget.catagoryList
+          dropdownMenuEntries: existingCataList
               .map<DropdownMenuEntry<TaskCatagory>>((TaskCatagory catagory) {
             return DropdownMenuEntry<TaskCatagory>(
               value: catagory,
@@ -406,6 +416,8 @@ class _CatagoryMenuContainerState extends State<CatagoryMenuContainer> {
               enabled: true,
             );
           }).toList(),
+          width: 250,
+          menuHeight: 300,
         ),
         const SizedBox(
           width: 10,
@@ -438,8 +450,8 @@ class _CatagoryMenuContainerState extends State<CatagoryMenuContainer> {
                         const SizedBox(width: 15),
                         TextButton(
                           onPressed: () {
-                            Navigator.pop(context);
                             addNewTaskCatagory(newCatagoryTextController.text);
+                            Navigator.pop(context);
                           },
                           child: const Text('Add'),
                         ),

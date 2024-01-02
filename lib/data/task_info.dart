@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:daily_completion/data/local_storage.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -14,7 +16,7 @@ class TaskCatagory {
   });
   TaskCatagory({
     required this.description,
-  }) : id = _incId++;
+  }) : id = ++_incId;
 
   // Add toJson factory method to convert TaskCatagory to a Map
   Map<String, dynamic> toJson() {
@@ -45,6 +47,12 @@ class TaskCatagory {
       }
     }
     return null;
+  }
+
+  static void updateIncrementId(List<TaskCatagory> catagoryList) {
+    for (TaskCatagory catagory in catagoryList) {
+      TaskCatagory._incId = max(TaskCatagory._incId, catagory.id);
+    }
   }
 }
 
@@ -107,6 +115,12 @@ class TaskInfo {
   @override
   String toString() {
     return 'TaskInfo{id: $id, completed: $completed, title: $title, description: $description, createdTime: $createdTime, duration: $duration, catagory: $catagoryId}';
+  }
+
+  static void updateIncrementId(List<TaskInfo> taskList) {
+    for (TaskInfo task in taskList) {
+      TaskInfo._incId = max(TaskInfo._incId, task.id);
+    }
   }
 }
 

@@ -79,7 +79,7 @@ class TaskInfoStorage {
           .map(
               (taskJson) => TaskInfo.fromJson(taskJson as Map<String, dynamic>))
           .toList();
-
+      TaskInfo.updateIncrementId(taskList);
       return taskList;
     } catch (e) {
       return [];
@@ -92,6 +92,7 @@ class TaskInfoStorage {
     Logger.info(
         'TaskInfoStorage writeTaskList taskListString: $taskListString');
     file.writeAsStringSync(taskListString);
+    TaskInfo.updateIncrementId(taskList);
   }
 
   Future<void> clearTaskList() async {
@@ -141,7 +142,7 @@ class TaskCatagoryStorage {
           .map((catagoryJson) =>
               TaskCatagory.fromJson(catagoryJson as Map<String, dynamic>))
           .toList();
-
+      TaskCatagory.updateIncrementId(catagoryList);
       return catagoryList;
     } catch (e) {
       return [];
@@ -154,6 +155,7 @@ class TaskCatagoryStorage {
     Logger.info(
         'TaskCatagoryStorage writeCatagoryList catagoryListString: $catagoryListString');
     file.writeAsStringSync(catagoryListString);
+    TaskCatagory.updateIncrementId(catagoryList);
   }
 
   Future<void> clearCatagoryList() async {
